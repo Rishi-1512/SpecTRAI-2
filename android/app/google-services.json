@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "589040620551",
+    "project_id": "sprctrai5g",
+    "storage_bucket": "sprctrai5g.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:589040620551:android:6e2863ab404c754e4186a2",
+        "android_client_info": {
+          "package_name": "com.example.spectrai"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrqHDq0FQuOgT_b78DblYIhDmNqeecpys"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
