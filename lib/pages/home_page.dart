@@ -11,6 +11,39 @@ import 'map_page.dart';
 import 'preset_page.dart';
 import 'settings_page.dart';
 
+class BandStatsWidget extends StatelessWidget {
+  final String download, upload, ping, signalStrength, earfcn;
+
+  BandStatsWidget(
+      this.download, this.upload, this.ping, this.signalStrength, this.earfcn);
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text("Download: $download", style: TextStyle(color: Colors.white)),
+        Text("Upload: $upload", style: TextStyle(color: Colors.white)),
+        Text("Ping: $ping", style: TextStyle(color: Colors.white)),
+        Text("Signal Strength: $signalStrength",
+            style: TextStyle(color: Colors.white)),
+        Text("EARFCN: $earfcn", style: TextStyle(color: Colors.white)),
+      ],
+    );
+  }
+}
+
+class BandDataWidget extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text("Band Data", style: TextStyle(color: Colors.white, fontSize: 20)),
+        // Add your band-related widgets here
+      ],
+    );
+  }
+}
+
 class HomePage extends StatefulWidget {
   @override
   _HomePageState createState() => _HomePageState();
@@ -38,6 +71,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: Colors.black, // ✅ Fix for white UI issue
       appBar: AppBar(
         backgroundColor: Colors.black,
         centerTitle: true,
@@ -96,7 +130,6 @@ class _HomeScreenState extends State<HomeScreen> {
   bool isLoading = false;
   String _selectedOption = "Download (For YouTube & Twitch)";
 
-  // Platform channel setup
   static const platform = MethodChannel('com.example.signal/info');
 
   Future<void> fetchSpeedTestResults() async {
@@ -125,7 +158,6 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Future<void> fetchAndStoreNetworkDetails() async {
-    // Request phone permission
     final status = await Permission.phone.request();
     if (!status.isGranted) {
       print("Phone permission denied");
@@ -182,7 +214,7 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   Widget build(BuildContext context) {
     return Container(
-      color: Colors.black,
+      color: Colors.black, // ✅ Fix for white UI issue
       child: Column(
         mainAxisAlignment: MainAxisAlignment.start,
         children: [
@@ -196,13 +228,11 @@ class _HomeScreenState extends State<HomeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.center,
               children: [
-                Text(
-                  "Optimize it for",
-                  style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                ),
+                Text("Optimize it for",
+                    style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
                 SizedBox(height: 10),
                 DropdownButton<String>(
                   value: _selectedOption,
@@ -218,75 +248,35 @@ class _HomeScreenState extends State<HomeScreen> {
                     "Download (For YouTube & Twitch)",
                     "Upload (For Video Calls & Live Streaming)",
                     "Ping (For Gaming)"
-                  ].map<DropdownMenuItem<String>>((String value) {
-                    return DropdownMenuItem<String>(
-                      value: value,
-                      child: Text(value, style: TextStyle(color: Colors.white)),
-                    );
-                  }).toList(),
+                  ]
+                      .map((value) =>
+                          DropdownMenuItem(value: value, child: Text(value)))
+                      .toList(),
                 ),
                 SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: isLoading ? null : fetchSpeedTestResults,
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Color(0xFF899499),
-                    padding: EdgeInsets.symmetric(horizontal: 50, vertical: 12),
                   ),
                   child: isLoading
                       ? CircularProgressIndicator(color: Colors.white)
                       : Text("Calculate",
-                          style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white)),
+                          style: TextStyle(color: Colors.white)),
                 ),
               ],
             ),
           ),
           SizedBox(height: 30),
           BandStatsWidget(
-              downloadSpeed, uploadSpeed, ping, signalStrength, earfcn),
+              downloadSpeed,
+              uploadSpeed,
+              ping,
+              signalStrength, // ✅ Updated SS
+              earfcn // ✅ Updated EARFCN
+              ),
         ],
       ),
-    );
-  }
-}
-
-class BandDataWidget extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text("Band Data",
-            style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white)),
-        SizedBox(height: 10),
-        Text("Data related to your network band will be displayed here.",
-            style: TextStyle(fontSize: 14, color: Colors.white)),
-      ],
-    );
-  }
-}
-
-class BandStatsWidget extends StatelessWidget {
-  final String download, upload, ping, signalStrength, earfcn;
-
-  BandStatsWidget(
-      this.download, this.upload, this.ping, this.signalStrength, this.earfcn);
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text("Download: $download", style: TextStyle(color: Colors.white)),
-        Text("Upload: $upload", style: TextStyle(color: Colors.white)),
-        Text("Ping: $ping", style: TextStyle(color: Colors.white)),
-        Text("Signal Strength: $signalStrength",
-            style: TextStyle(color: Colors.white)),
-        Text("EARFCN: $earfcn", style: TextStyle(color: Colors.white)),
-      ],
     );
   }
 }
