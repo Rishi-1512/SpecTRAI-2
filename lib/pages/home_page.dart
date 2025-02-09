@@ -1,11 +1,15 @@
 import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_database/firebase_database.dart';
 import 'package:flutter/material.dart';
 import 'package:google_nav_bar/google_nav_bar.dart';
+import 'package:http/http.dart' as http;
+import 'package:geolocator/geolocator.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter/services.dart';
 import 'map_page.dart';
 import 'preset_page.dart';
 import 'settings_page.dart';
-import 'package:http/http.dart' as http;
 
 class HomePage extends StatefulWidget {
   @override
@@ -87,25 +91,29 @@ class _HomeScreenState extends State<HomeScreen> {
   String downloadSpeed = "---";
   String uploadSpeed = "---";
   String ping = "---";
+  String signalStrength = "---";
+  String earfcn = "---";
   bool isLoading = false;
+  String _selectedOption = "Download (For YouTube & Twitch)";
 
-  /// Fetch speed test results from Flask API
+  // Platform channel setup
+  static const platform = MethodChannel('com.example.signal/info');
+
   Future<void> fetchSpeedTestResults() async {
     setState(() => isLoading = true);
-
-    final url = Uri.parse("http://10.0.2.2:5000/speedtest"); // Emulator URL
+    final url = Uri.parse("http://10.0.2.2:5000/speedtest");
 
     try {
       final response = await http.get(url);
-
-      print("Response Status Code: ${response.statusCode}");
-      print("Response Body: ${response.body}");
-
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        downloadSpeed = "${data['download_speed']} Mbps";
-        uploadSpeed = "${data['upload_speed']} Mbps";
-        ping = "${data['ping']} ms";
+        setState(() {
+          downloadSpeed = "${data['download_speed']} Mbps";
+          uploadSpeed = "${data['upload_speed']} Mbps";
+          ping = "${data['ping']} ms";
+        });
+
+        await fetchAndStoreNetworkDetails();
       } else {
         print("Failed to fetch data. Status: ${response.statusCode}");
       }
@@ -114,6 +122,61 @@ class _HomeScreenState extends State<HomeScreen> {
     }
 
     setState(() => isLoading = false);
+  }
+
+  Future<void> fetchAndStoreNetworkDetails() async {
+    // Request phone permission
+    final status = await Permission.phone.request();
+    if (!status.isGranted) {
+      print("Phone permission denied");
+      return;
+    }
+
+    Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high);
+
+    try {
+      final Map<dynamic, dynamic>? data =
+          await platform.invokeMethod('getSignalInfo');
+
+      if (data != null) {
+        final Map<String, dynamic> networkData = {
+          "mode": getSelectedMode(),
+          "longitude": position.longitude,
+          "latitude": position.latitude,
+          "rsrp": data['rsrp'] ?? "---",
+          "rsrq": data['rsrq'] ?? "---",
+          "earfcn": data['earfcn'] ?? "---",
+          "signal_strength": data['dbm'] ?? "---",
+          "bandwidth": data['bandwidth'] ?? "---",
+          "pci": data['pci'] ?? "---"
+        };
+
+        setState(() {
+          signalStrength = "${data['dbm'] ?? "---"} dBm";
+          earfcn = data['earfcn']?.toString() ?? "---";
+        });
+
+        DatabaseReference ref = FirebaseDatabase.instance
+            .ref("network_data/${DateTime.now().millisecondsSinceEpoch}");
+        await ref.set(networkData);
+      }
+    } catch (e) {
+      print("Error getting signal info: $e");
+    }
+  }
+
+  String getSelectedMode() {
+    switch (_selectedOption) {
+      case "Download (For YouTube & Twitch)":
+        return "1";
+      case "Upload (For Video Calls & Live Streaming)":
+        return "2";
+      case "Ping (For Gaming)":
+        return "3";
+      default:
+        return "0";
+    }
   }
 
   @override
@@ -141,7 +204,27 @@ class _HomeScreenState extends State<HomeScreen> {
                       color: Colors.white),
                 ),
                 SizedBox(height: 10),
-                OptimizeDropdown(),
+                DropdownButton<String>(
+                  value: _selectedOption,
+                  dropdownColor: Colors.black,
+                  style: TextStyle(color: Colors.white, fontSize: 16),
+                  iconEnabledColor: Colors.white,
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedOption = newValue!;
+                    });
+                  },
+                  items: [
+                    "Download (For YouTube & Twitch)",
+                    "Upload (For Video Calls & Live Streaming)",
+                    "Ping (For Gaming)"
+                  ].map<DropdownMenuItem<String>>((String value) {
+                    return DropdownMenuItem<String>(
+                      value: value,
+                      child: Text(value, style: TextStyle(color: Colors.white)),
+                    );
+                  }).toList(),
+                ),
                 SizedBox(height: 20),
                 ElevatedButton(
                   onPressed: isLoading ? null : fetchSpeedTestResults,
@@ -151,84 +234,47 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   child: isLoading
                       ? CircularProgressIndicator(color: Colors.white)
-                      : Text(
-                          "Calculate",
+                      : Text("Calculate",
                           style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white),
-                        ),
+                              color: Colors.white)),
                 ),
               ],
             ),
           ),
           SizedBox(height: 30),
-          BandStatsWidget(downloadSpeed, uploadSpeed, ping),
+          BandStatsWidget(
+              downloadSpeed, uploadSpeed, ping, signalStrength, earfcn),
         ],
       ),
     );
   }
 }
 
-// ✅ Additional Widgets
-
 class BandDataWidget extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        Text(
-          "Band Data",
-          style: TextStyle(
-              fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
+        Text("Band Data",
+            style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white)),
         SizedBox(height: 10),
-        Text(
-          "Data related to your network band will be displayed here.",
-          style: TextStyle(fontSize: 14, color: Colors.white),
-        ),
+        Text("Data related to your network band will be displayed here.",
+            style: TextStyle(fontSize: 14, color: Colors.white)),
       ],
     );
   }
 }
 
-class OptimizeDropdown extends StatefulWidget {
-  @override
-  _OptimizeDropdownState createState() => _OptimizeDropdownState();
-}
-
-class _OptimizeDropdownState extends State<OptimizeDropdown> {
-  String _selectedOption = "Default";
-
-  @override
-  Widget build(BuildContext context) {
-    return DropdownButton<String>(
-      value: _selectedOption,
-      dropdownColor: Colors.black,
-      style: TextStyle(color: Colors.white, fontSize: 16),
-      iconEnabledColor: Colors.white,
-      onChanged: (String? newValue) {
-        setState(() {
-          _selectedOption = newValue!;
-        });
-      },
-      items: <String>["Default", "Gaming", "Streaming", "Browsing"]
-          .map<DropdownMenuItem<String>>((String value) {
-        return DropdownMenuItem<String>(
-          value: value,
-          child: Text(value, style: TextStyle(color: Colors.white)),
-        );
-      }).toList(),
-    );
-  }
-}
-
 class BandStatsWidget extends StatelessWidget {
-  final String download;
-  final String upload;
-  final String ping;
+  final String download, upload, ping, signalStrength, earfcn;
 
-  BandStatsWidget(this.download, this.upload, this.ping);
+  BandStatsWidget(
+      this.download, this.upload, this.ping, this.signalStrength, this.earfcn);
 
   @override
   Widget build(BuildContext context) {
@@ -237,6 +283,9 @@ class BandStatsWidget extends StatelessWidget {
         Text("Download: $download", style: TextStyle(color: Colors.white)),
         Text("Upload: $upload", style: TextStyle(color: Colors.white)),
         Text("Ping: $ping", style: TextStyle(color: Colors.white)),
+        Text("Signal Strength: $signalStrength",
+            style: TextStyle(color: Colors.white)),
+        Text("EARFCN: $earfcn", style: TextStyle(color: Colors.white)),
       ],
     );
   }
