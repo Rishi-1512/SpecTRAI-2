@@ -1,5 +1,6 @@
 This project is a 5G Network Speed Test & Analysis App that measures and analyzes mobile network performance using Flutter for the frontend, Flask for backend services, Firebase for data storage, and an ML model (developed by a collaborator) to estimate performance metrics.
 
+
 Flutter Frontend -
 Intuitive UI/UX designed for seamless navigation.
 Bottom Navigation Bar Google Nav Bar to switch between:
