@@ -56,7 +56,7 @@ Suggest the best frequency bands based on location & signal strength.
 **
 
 Credits -
-UI/UX & Flutter Development: Ritam Sen
-ML Model & Predictions: Ojas Raverkar
+UI/UX & Flutter Development: Ritam Sen |||
+ML Model & Predictions: Ojas Raverkar |||
 Backend & API Integrations: Ritam Sen
 
